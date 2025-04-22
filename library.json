@@ -1,0 +1,27 @@
+
+{
+    "name": "rdf-epd-lib",
+    "version": "0.0.1",
+    "description": "epaper driver library for a 4.2inch waveshare epaper display with three colors, for educational purpose.",
+    "keywords": "epaper, driver, esp32",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/jomaway/rdf-epd-lib"
+    },
+    "authors":
+    [
+      {
+        "name": "Jonas Malassa",
+        "email": "jonas.malassa@rdf.nuernberg.de",
+        "maintainer": true
+      }
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/jomaway/rdf-epd-lib",
+    "dependencies": {
+        "adafruit/Adafruit GFX Library":"^1.12.0"
+    },
+    "frameworks": "arduino",
+    "platforms": "espressif32"
+  }

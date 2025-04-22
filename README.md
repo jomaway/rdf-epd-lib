@@ -1,2 +1,3 @@
 # rdf-epd-lib
-simple educational epaper display library for a 4.2inch waveshare module with three colors.
+
+This is a simple educational library for the waveshare 4.2inch red, black, white epaper display.
