@@ -11,10 +11,10 @@ class Canvas : public Adafruit_GFX
 public:
     uint8_t framebuffer[300*400/8];
 
-    Canvas(uint16_t width, uint16_t height) : Adafruit_GFX(width, height)
+    Canvas(uint16_t width= 400, uint16_t height = 300) : Adafruit_GFX(width, height)
     {
-        uint32_t buffer_size = height * width / 8;
-        // memset(framebuffer, 0xFF, buffer_size);
+        const uint32_t buffer_size = height * width / 8;
+        memset(framebuffer, 0xFF, buffer_size);
     }
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) override
