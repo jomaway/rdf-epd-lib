@@ -2,6 +2,7 @@
 #define epaper_h
 
 #include "epd_driver.h"
+#include "epd_graphics.h"
 
 // Display resolution
 #define EPD_WIDTH       400
@@ -15,7 +16,7 @@ public:
     EPaper(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin);
     
     void begin(); 
-    void showImage(const byte *image, ImageColor_t color);
+    void showImage(const byte *image, bool use_red_color);
 };
 
 #endif // epaper_h

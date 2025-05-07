@@ -11,17 +11,16 @@ void EPaper::begin()
 {
   Serial.println("EPAPER::begin()");
   driver->init();
-  driver->clear();
 }
 
-void EPaper::showImage(const byte *image, ImageColor_t color)
+void EPaper::showImage(const byte *image, bool use_red_color)
 {
   Serial.println("EPAPER::showImage()");
   /* This clears the SRAM of the e-paper display */
   this->driver->clear();
 
   // draw here!
-  this->driver->display(image, color);
+  this->driver->display(image, false, false);
 
   /* Deep sleep */
   this->driver->sleep();

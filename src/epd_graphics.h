@@ -9,9 +9,9 @@
 class Canvas : public Adafruit_GFX
 {
 public:
-    uint8_t framebuffer[300*400/8];
+    uint8_t framebuffer[300 * 400 / 8];
 
-    Canvas(uint16_t width= 400, uint16_t height = 300) : Adafruit_GFX(width, height)
+    Canvas(uint16_t width = 400, uint16_t height = 300) : Adafruit_GFX(width, height)
     {
         const uint32_t buffer_size = height * width / 8;
         memset(framebuffer, 0xFF, buffer_size);
@@ -19,9 +19,16 @@ public:
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) override
     {
-        if (x < 0 || x > this->WIDTH || y < 0 || y >= this->HEIGHT)
+        if (x < 0 || x > this->_width || y < 0 || y >= this->_height)
         {
             return;
+        }
+
+        if (this->rotation == 1)
+        {
+            auto temp = y;
+            y = x;
+            x = this->WIDTH - temp;
         }
 
         if (color)

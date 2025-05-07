@@ -4,42 +4,49 @@
 class EPD_HAL_ESP32 : public EPD_HAL {
 private:
     int cs, dc, rst, busy;
+    SPISettings _spi_settings;
 public:
     EPD_HAL_ESP32(int cs, int dc, int rst, int busy) 
-        : cs(cs), dc(dc), rst(rst), busy(busy) {}
+        : cs(cs), dc(dc), rst(rst), busy(busy), _spi_settings(2000000, MSBFIRST, SPI_MODE0) {}
 
     void init() override {
+
         pinMode(cs, OUTPUT);
         pinMode(dc, OUTPUT);
         pinMode(rst, OUTPUT);
         pinMode(busy, INPUT);
 
         SPI.begin();
-        SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
     }
     
     void send_command(uint8_t cmd) override {
+        Serial.printf("EPD_HAL::send_cmd(%02x) \n", cmd);
         this->set_pin(dc, LOW);
+        this->spi_start_transfer();
         this->spi_transfer(cmd);
+        this->spi_end_transfer();
+        this->set_pin(dc, HIGH);
     }
 
     void send_data(uint8_t data) override {
         this->set_pin(dc, HIGH);
+        this->spi_start_transfer();
         this->spi_transfer(data);
+        this->spi_end_transfer();
     }
 
-    /**
-     *  @brief: module reset. 
-     *          often used to awaken the module in deep sleep, 
-     *          see Epd::Sleep();
-     */
-    void reset() override {
-        this->set_pin(rst, HIGH);
-        this->delay_ms(200);
-        this->set_pin(rst, LOW);
-        this->delay_ms(2);
-        this->set_pin(rst, HIGH);
-        this->delay_ms(200);
+    void send_data(const uint8_t *data, uint8_t len){
+        this->set_pin(dc, HIGH);
+        this->spi_start_transfer();
+        for (int i=0; i<len; i++)
+        {
+            this->spi_transfer(*data++);
+        }
+        this->spi_end_transfer();
+    }
+
+    void set_reset_pin(bool state){
+        set_pin(rst, state);
     }
 
     void wait_busy() {
@@ -52,18 +59,31 @@ public:
         delay(ms);
     }
 
-    void set_pin(uint8_t pin, bool state){
+    void spi_start_transfer()
+    {
+        SPI.beginTransaction(this->_spi_settings);
+        this->set_pin(cs, LOW);
+    }
+
+    void spi_transfer(uint8_t data)
+    {
+        SPI.transfer(data);
+    }
+
+    void spi_end_transfer(){
+        this->set_pin(cs, HIGH);
+        SPI.endTransaction();
+    }
+
+    protected:
+
+    void set_pin(uint8_t pin, bool state) override
+    {
         digitalWrite(pin, state);
     }
 
-    bool read_pin(uint8_t pin){
-        return digitalRead(pin);
-    }
-
-    void spi_transfer(byte data)
+    bool read_pin(uint8_t pin) override
     {
-        this->set_pin(cs, LOW);
-        SPI.transfer(data);
-        this->set_pin(cs, HIGH);
+        return digitalRead(pin);
     }
 };
