@@ -95,6 +95,12 @@ namespace Status
 } // namespace Status
 
 
+/**
+ * @brief Interface for controlling an 400x300 e-paper display with SSD1683 controller.
+ *
+ * This class provides methods for sending a full or partial frame to an e-paper display,
+ * abstracting hardware-specific implementation details.
+ */
 class EPD_Driver {
     protected:
         EPD_HAL* hal; // Uses hardware abstraction layer
@@ -106,16 +112,17 @@ class EPD_Driver {
         bool set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
         bool set_cursor(uint16_t x, uint16_t y);
         void _write_framebuffer(uint8_t value, bool use_red_ram);
+        void reset();
     public:
-        EPD_Driver(EPD_HAL* hal) : hal(hal) {}
+        EPD_Driver(EPD_HAL* hal);
         void init();
         void update(bool fast);
         void clear();
         void write_framebuffer(const uint8_t *data, bool use_red_ram);
         void write_framebuffer_partial(const uint8_t *data, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
         void display(const uint8_t *image, bool use_red_ram, bool fast);
+        void display_partial(const uint8_t *image, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
         void sleep();
-        void reset();
 };
 
 #endif

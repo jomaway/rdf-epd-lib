@@ -1,10 +1,25 @@
 #include "epd_driver.h"
 
+/**
+ * @brief Constructor for the EPD_Driver class.
+ * 
+ * This constructor initializes the EPD driver with a hardware abstraction layer (HAL)
+ */
+EPD_Driver::EPD_Driver(EPD_HAL* hal): hal(hal), use_fast_update(false)
+{
+    hal->init();
+}
+
+/**
+ * @brief Initializes the EPD driver and the display controller.
+ *
+ * This function initializes the hardware abstraction layer (HAL) for the EPD,
+ * resets the display, and configures various settings such as border waveform,
+ * temperature sensor control, and data entry mode.
+ */
 void EPD_Driver::init()
 {
     Serial.println("EPD_DRIVER::init() -> START");
-    // init pins and spi in EPD_HAL
-    hal->init();
 
     // EPD hardware init
     this->reset();
@@ -33,6 +48,9 @@ void EPD_Driver::init()
     Serial.println("EPD_DRIVER::init() -> END");
 }
 
+/**
+ * @brief Enables fast update mode for the display.
+*/
 void EPD_Driver::enable_fast_update()
 {
     Serial.println("EPD_DRIVER::en_fast() -> START");
@@ -53,6 +71,9 @@ void EPD_Driver::enable_fast_update()
     }
 }
 
+/**
+ * @brief Disables fast update mode for the display.
+*/
 void EPD_Driver::disable_fast_update()
 {
     this->use_fast_update = false;
@@ -108,6 +129,19 @@ bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 }
 
 
+/**
+ * @brief Sets the cursor position for drawing on the display.
+ *
+ * This function sets the cursor position in the display RAM, allowing
+ * subsequent pixel data to be written at the specified coordinates.
+ * The coordinates are specified in pixels.
+ *
+ * @param x The X coordinate (in pixels).
+ * @param y The Y coordinate (in pixels).
+ * 
+ * @return true if the cursor was successfully set, false if the specified
+ *         coordinates exceed the display bounds.
+ */
 bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
 {
     Serial.println("EPD_DRIVER::set_cursor() -> START");
@@ -130,7 +164,9 @@ bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
 }
 
 
-
+/**
+ * * @brief Updates the epapers screen with the current RAM content.
+ */
 void EPD_Driver::update(bool fast)
 {
     if (fast) 
@@ -159,14 +195,22 @@ void EPD_Driver::update(bool fast)
     Serial.println("EPD_DRIVER::update() -> END");
 }
 
+/**
+ * @brief Writes a single value to the framebuffer.
+ *
+ * This function fills the entire framebuffer with the specified value.
+ * It is typically used for clearing the display or setting a uniform color.
+ *
+ * @param value The value to write to the framebuffer (0x00 for black/red, 0xFF for white).
+ * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
+ */
 void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
 {
     Serial.println("EPD_DRIVER::_write_framebuffer() -> START");
     const uint32_t buffer_size = this->height * this->width / 8;
 
-    // set_window(0,0,this->width, this->height);
-    // set_cursor(0,0);
-
+    set_window(0,0,this->width, this->height);
+    set_cursor(0,0);
 
     hal->send_command(use_red_ram ? DisplayCmd::WRITE_RAM_RED: DisplayCmd::WRITE_RAM_BW);
 
@@ -179,6 +223,12 @@ void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
     Serial.println("EPD_DRIVER::_write_framebuffer() -> END");
 }
 
+/**
+ * @brief Clears the display by filling the framebuffer with 0xFF (white).
+ *
+ * This function clears both the black/white and red RAM locations.
+ * It then updates the display to reflect the cleared state.
+ */
 void EPD_Driver::clear()
 {
     Serial.println("EPD_DRIVER::clear() -> START");
@@ -193,12 +243,23 @@ void EPD_Driver::clear()
     Serial.println("EPD_DRIVER::clear() -> END");
 }
 
+
+/**
+ * @brief Writes a framebuffer to the display.
+ *
+ * This function sends the framebuffer data to the display controller's RAM.
+ * It can write to either the black/white or red RAM, depending on the use_red_ram parameter.
+ *
+ * @param data Pointer to the framebuffer data. This needs to match the display resolution.
+ *             The data should be in the format expected by the display (1 bit per pixel).
+ * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
+ */
 void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
 {
     Serial.println("EPD_DRIVER::write() -> START");
     uint32_t w = (this->width % 8 == 0) ? (this->width / 8) : (this->width / 8 + 1);
-    // set_window(0,0,this->width, this->height);
-    // set_cursor(0,0);
+    set_window(0,0,this->width, this->height);
+    set_cursor(0,0);
 
     // select RAM
     hal->send_command(use_red_ram ? DisplayCmd::WRITE_RAM_RED: DisplayCmd::WRITE_RAM_BW);
@@ -216,15 +277,50 @@ void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
     Serial.println("EPD_DRIVER::write() -> END");
 }
 
+
+/**
+ * @brief Writes a partial framebuffer to the display.
+ *
+ * This function sends a portion of the framebuffer data to the display controller's RAM.
+ * It is only supported for the black/white RAM.
+ *
+ * @param data Pointer to the framebuffer data. This needs to match the display resolution.
+ *             The data should be in the format expected by the display (1 bit per pixel).
+ * @param x The starting X coordinate (in pixels).
+ * @param y The starting Y coordinate (in pixels).
+ * @param w The width of the window (in pixels).
+ * @param h The height of the window (in pixels).
+ */
 void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
+    Serial.println("EPD_DRIVER::write_partial() -> START");
     if(!set_window(x,y,w,h) || !set_cursor(x,y)){
         return;
     }
-
-    // TODO
+    hal->send_command(DisplayCmd::WRITE_RAM_BW);
+    hal->spi_start_transfer();
+    for (uint32_t j = 0; j < h; j++)
+    {
+        for (uint32_t i = 0; i < w; i++)
+        {
+            hal->spi_transfer(data[i + j * w]);
+        }
+    }
+    hal->spi_end_transfer();
+    Serial.println("EPD_DRIVER::write_partial() -> END");
 }
 
+/**
+ * @brief Displays the image on the screen.
+ *
+ * This function writes the framebuffer data to the display controller's RAM
+ * and then updates the display.
+ *
+ * @param image Pointer to the framebuffer data. This needs to match the display resolution.
+ *              The data should be in the format expected by the display (1 bit per pixel).
+ * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
+ * @param fast If true, uses fast update mode for the display.
+ */
 void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
 {
     Serial.println("EPD_DRIVER::display() -> START");
@@ -237,6 +333,32 @@ void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
 }
 
 
+/**
+ * @brief Displays a partial image on the screen.
+ * 
+ * This function writes a portion of the framebuffer data to the display controller's RAM
+ * and then uses a fast update for updating the display.
+ */
+void EPD_Driver::display_partial(const uint8_t *image, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+{
+    Serial.println("EPD_DRIVER::display_partial() -> START");
+    // write image to display controller ram
+    this->write_framebuffer_partial(image, x, y, w, h);
+
+    // update display
+    this->update(true);
+    Serial.println("EPD_DRIVER::display_partial() -> END");
+}
+
+
+/**
+ * @brief Puts the display into deep sleep mode.
+ *
+ * This function sends the command to put the display into deep sleep mode,
+ * which reduces power consumption when the display is not in use. 
+ * 
+ * To wake the display from deep sleep, the init() function should be called again.
+ */
 void EPD_Driver::sleep()
 {
     Serial.println("EPD_DRIVER::sleep() -> START");
@@ -249,6 +371,13 @@ void EPD_Driver::sleep()
  *  @brief: module reset. 
  *          often used to awaken the module in deep sleep, 
  *          see Epd::Sleep();
+ */
+
+/**
+ * @brief Resets the display controller.
+ *
+ * This function performs a hardware reset of the display controller,
+ * which is typically required after power-up or when waking from deep sleep.
  */
 void EPD_Driver::reset()
 {
