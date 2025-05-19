@@ -83,17 +83,6 @@ namespace DisplayCmd {
       constexpr uint8_t NOP                           = 0x7F; // No operation without effect
 }
 
-namespace ImageColor {
-    constexpr uint8_t BLACK = 0;
-    constexpr uint8_t RED = 1;
-}
-
-namespace Status
-{
-    constexpr bool FAILURE = false;
-    constexpr bool SUCCESS = true;
-} // namespace Status
-
 
 /**
  * @brief Interface for controlling an 400x300 e-paper display with SSD1683 controller.

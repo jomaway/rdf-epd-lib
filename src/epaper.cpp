@@ -13,7 +13,13 @@ void EPaper::begin()
   driver->init();
 }
 
-void EPaper::showImage(const byte *image, bool use_red_color)
+void EPaper::end()
+{
+  /* Deep sleep */
+  this->driver->sleep();
+}
+
+void EPaper::showBWImage(const byte *image)
 {
   Serial.println("EPAPER::showImage()");
   /* This clears the SRAM of the e-paper display */
@@ -22,7 +28,15 @@ void EPaper::showImage(const byte *image, bool use_red_color)
   // draw here!
   this->driver->display(image, false, false);
 
-  /* Deep sleep */
-  this->driver->sleep();
   Serial.println("EPAPER::showImage -> END");
+}
+
+void EPaper::showBWImageFast(const byte *image)
+{
+  Serial.println("EPAPER::showImageFast()");
+
+  // draw here!
+  this->driver->display(image, false, true);
+
+  Serial.println("EPAPER::showImageFast -> END");
 }

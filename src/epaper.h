@@ -16,7 +16,11 @@ public:
     EPaper(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin);
     
     void begin(); 
-    void showImage(const byte *image, bool use_red_color);
+    void end();
+    void showBWImage(const byte *image);
+    void showBWImageFast(const byte *image);
+    void showRedImage(const byte *image);
+    void showRedImageFast(const byte *image);
 };
 
 #endif // epaper_h

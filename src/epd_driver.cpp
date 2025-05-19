@@ -1,5 +1,11 @@
 #include "epd_driver.h"
 
+#ifdef ESP32
+#include "esp_log.h"
+static const char* TAG = "RDF_EPD_DRIVER";
+#endif
+
+
 /**
  * @brief Constructor for the EPD_Driver class.
  * 
@@ -19,18 +25,12 @@ EPD_Driver::EPD_Driver(EPD_HAL* hal): hal(hal), use_fast_update(false)
  */
 void EPD_Driver::init()
 {
-    Serial.println("EPD_DRIVER::init() -> START");
-
-    // EPD hardware init
+    ESP_LOGD(TAG,"EPD_DRIVER::init() -> START");
     this->reset();
     hal->wait_busy();
 
     hal->send_command(DisplayCmd::SOFTWARE_RESET); // Software reset to default values
     hal->wait_busy();
-
-    // hal->send_command(DISP_UPDATE_CTRL_1);    // Display update command
-    // hal->send_data(0x40);       // RED: Inverse RAM content
-    // hal->send_data(0x00);       // BW: Normal
 
     hal->send_command(DisplayCmd::BORDER_WAVEFORM_CTRL); 
     hal->send_data(0x05);           // Default waveform setting for border LUT1
@@ -45,7 +45,7 @@ void EPD_Driver::init()
     this->set_cursor(0,0);
 
     hal->wait_busy();
-    Serial.println("EPD_DRIVER::init() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::init() -> END");
 }
 
 /**
@@ -53,7 +53,7 @@ void EPD_Driver::init()
 */
 void EPD_Driver::enable_fast_update()
 {
-    Serial.println("EPD_DRIVER::en_fast() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::en_fast() -> START");
     if (false == this->use_fast_update){
 
         // Set temp for fast update
@@ -67,7 +67,7 @@ void EPD_Driver::enable_fast_update()
         hal->wait_busy();
         
         this->use_fast_update = true;
-        Serial.println("EPD_DRIVER::en_fast() -> END");
+        ESP_LOGD(TAG,"EPD_DRIVER::en_fast() -> END");
     }
 }
 
@@ -106,11 +106,11 @@ void EPD_Driver::disable_fast_update()
  */
 bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    Serial.println("EPD_DRIVER::set_window() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::set_window() -> START");
     // check if out of bound
     if ( (x + w) > this->width || (y + h) > this->height)
     {
-        Serial.println("EPD_DRIVER::set_window() -> ERROR");
+        ESP_LOGD(TAG,"EPD_DRIVER::set_window() -> ERROR");
         return false;
     }
 
@@ -124,7 +124,7 @@ bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
     hal->send_data((y + h - 1) & 0xFF);
     hal->send_data((y + h - 1) >> 8 & 0xFF);
 
-    Serial.println("EPD_DRIVER::set_window() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::set_window() -> END");
     return true;
 }
 
@@ -144,11 +144,11 @@ bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
  */
 bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
 {
-    Serial.println("EPD_DRIVER::set_cursor() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::set_cursor() -> START");
     // check if out of bound
     if (x > this->width || y > this->height)
     {
-        Serial.println("EPD_DRIVER::set_cursor() -> ERROR");
+        ESP_LOGD(TAG,"EPD_DRIVER::set_cursor() -> ERROR");
         return false;
     }
 
@@ -159,7 +159,7 @@ bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
     hal->send_data(y & 0xFF);
     hal->send_data((y >> 8) & 0xFF);
 
-    Serial.println("EPD_DRIVER::set_cursor() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::set_cursor() -> END");
     return true;
 }
 
@@ -171,7 +171,7 @@ void EPD_Driver::update(bool fast)
 {
     if (fast) 
     {
-        Serial.println("EPD_DRIVER::update() -> FAST");
+        ESP_LOGD(TAG,"EPD_DRIVER::update() -> FAST");
         if (!this->use_fast_update){
             this->enable_fast_update();
         }
@@ -181,18 +181,18 @@ void EPD_Driver::update(bool fast)
     }
     else 
     {
-        Serial.println("EPD_DRIVER::update() -> NORMAL");
+        ESP_LOGD(TAG,"EPD_DRIVER::update() -> NORMAL");
         this->use_fast_update = false; // make sure that before the next fast update it gets enabled again.
 
         hal->send_command(DisplayCmd::DISP_UPDATE_CTRL_2);
         hal->send_data(0xF7); // EN ANALOG, LOAD TEMP, LOAD LUT, DISP COLOR MODE, DIS ANALOG, DIS OSC
     }
 
-    Serial.println("EPD_DRIVER::update() -> ACTIVATE");
+    ESP_LOGD(TAG,"EPD_DRIVER::update() -> ACTIVATE");
     hal->send_command(DisplayCmd::MASTER_ACTIVATION);
-    Serial.println("EPD_DRIVER::update() -> ACTIVATE SEND");
+    ESP_LOGD(TAG,"EPD_DRIVER::update() -> ACTIVATE SEND");
     hal->wait_busy();
-    Serial.println("EPD_DRIVER::update() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::update() -> END");
 }
 
 /**
@@ -206,7 +206,7 @@ void EPD_Driver::update(bool fast)
  */
 void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
 {
-    Serial.println("EPD_DRIVER::_write_framebuffer() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::_write_framebuffer() -> START");
     const uint32_t buffer_size = this->height * this->width / 8;
 
     set_window(0,0,this->width, this->height);
@@ -220,7 +220,7 @@ void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
         hal->spi_transfer(value);
     }
     hal->spi_end_transfer();
-    Serial.println("EPD_DRIVER::_write_framebuffer() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::_write_framebuffer() -> END");
 }
 
 /**
@@ -231,7 +231,7 @@ void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
  */
 void EPD_Driver::clear()
 {
-    Serial.println("EPD_DRIVER::clear() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::clear() -> START");
     // clear BW ram location
     this->_write_framebuffer(0xFF, false);
 
@@ -240,7 +240,7 @@ void EPD_Driver::clear()
 
     // update screen
     this->update(false); // always make a full update on clear
-    Serial.println("EPD_DRIVER::clear() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::clear() -> END");
 }
 
 
@@ -256,7 +256,7 @@ void EPD_Driver::clear()
  */
 void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
 {
-    Serial.println("EPD_DRIVER::write() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::write() -> START");
     uint32_t w = (this->width % 8 == 0) ? (this->width / 8) : (this->width / 8 + 1);
     set_window(0,0,this->width, this->height);
     set_cursor(0,0);
@@ -274,7 +274,7 @@ void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
         }
     }
     hal->spi_end_transfer();
-    Serial.println("EPD_DRIVER::write() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::write() -> END");
 }
 
 
@@ -293,7 +293,7 @@ void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
  */
 void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    Serial.println("EPD_DRIVER::write_partial() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::write_partial() -> START");
     if(!set_window(x,y,w,h) || !set_cursor(x,y)){
         return;
     }
@@ -307,7 +307,7 @@ void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint
         }
     }
     hal->spi_end_transfer();
-    Serial.println("EPD_DRIVER::write_partial() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::write_partial() -> END");
 }
 
 /**
@@ -323,13 +323,13 @@ void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint
  */
 void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
 {
-    Serial.println("EPD_DRIVER::display() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::display() -> START");
     // write image to display controller ram
     this->write_framebuffer(image, use_red_ram);
 
     // update display
     this->update(fast);
-    Serial.println("EPD_DRIVER::display() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::display() -> END");
 }
 
 
@@ -341,13 +341,13 @@ void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
  */
 void EPD_Driver::display_partial(const uint8_t *image, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    Serial.println("EPD_DRIVER::display_partial() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::display_partial() -> START");
     // write image to display controller ram
     this->write_framebuffer_partial(image, x, y, w, h);
 
     // update display
     this->update(true);
-    Serial.println("EPD_DRIVER::display_partial() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::display_partial() -> END");
 }
 
 
@@ -361,10 +361,10 @@ void EPD_Driver::display_partial(const uint8_t *image, uint16_t x, uint16_t y, u
  */
 void EPD_Driver::sleep()
 {
-    Serial.println("EPD_DRIVER::sleep() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::sleep() -> START");
     hal->send_command(DisplayCmd::DEEP_SLEEP_MODE);
     hal->send_data(0x01); // Deep Sleep Mode
-    Serial.println("EPD_DRIVER::sleep() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::sleep() -> END");
 }
 
 /**
@@ -381,12 +381,12 @@ void EPD_Driver::sleep()
  */
 void EPD_Driver::reset()
 {
-    Serial.println("EPD_DRIVER::reset() -> START");
+    ESP_LOGD(TAG,"EPD_DRIVER::reset() -> START");
     hal->set_reset_pin(HIGH);
     hal->delay_ms(200);
     hal->set_reset_pin(LOW);
     hal->delay_ms(2);
     hal->set_reset_pin(HIGH);
     hal->delay_ms(200);
-    Serial.println("EPD_DRIVER::reset() -> END");
+    ESP_LOGD(TAG,"EPD_DRIVER::reset() -> END");
 }
