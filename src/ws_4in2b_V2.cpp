@@ -17,7 +17,7 @@ void WS_4in2b_V2::end()
 {
   _initialized = false;
   /* Deep sleep */
-  this->driver.sleep();
+  driver.sleep();
 }
 
 void WS_4in2b_V2::drawPixel(int16_t x, int16_t y, uint16_t color)
@@ -55,4 +55,16 @@ void WS_4in2b_V2::display()
   }
 
   driver.display(framebuffer, false, false);
+}
+
+void WS_4in2b_V2::showBWImage(const uint8_t *image)
+{
+  if (!_initialized)
+  {
+    begin();
+  }
+
+  driver.display(image,false,false);
+
+  end();
 }
