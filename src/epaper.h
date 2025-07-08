@@ -1,7 +1,7 @@
 #ifndef epaper_h
 #define epaper_h
 
-#include "epd_driver.h"
+#include "epd_driver_ssd1683.h"
 #include "epd_graphics.h"
 
 // Display resolution
@@ -11,7 +11,7 @@
 class EPaper {
 private:
     EPD_HAL *hal;
-    EPD_Driver *driver;
+    EPD_Driver_SSD1683 *driver;
 public:
     EPaper(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin);
     

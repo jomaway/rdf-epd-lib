@@ -16,7 +16,6 @@ public:
 
     void init() override
     {
-
         pinMode(cs, OUTPUT);
         pinMode(dc, OUTPUT);
         pinMode(rst, OUTPUT);
@@ -27,7 +26,7 @@ public:
 
     void send_command(const uint8_t cmd) override
     {
-        ESP_LOGI(TAG, "send_cmd(%02x)", cmd);
+        ESP_LOGD(TAG, "CMD: %02x", cmd);
         this->set_pin(dc, LOW);
         this->spi_start_transfer();
         SPI.write(cmd);
@@ -37,7 +36,7 @@ public:
 
     void send_data_byte(const uint8_t data) override
     {
-        ESP_LOGD(TAG, "send_data(%02x)", data);
+        ESP_LOGD(TAG, "DATA: %02x", data);
         this->set_pin(dc, HIGH);
         this->spi_start_transfer();
         SPI.write(data);

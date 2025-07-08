@@ -1,9 +1,9 @@
-#ifndef EPD_DRIVER_H
-#define EPD_DRIVER_H
+#ifndef EPD_SSD1683_DRIVER_H
+#define EPD_SSD1683_DRIVER_H
 #include "epd_hal.h"
 
 
-namespace DisplayCmd {
+namespace SSD1683Command {
       // System Control
       constexpr uint8_t DRIVER_OUTPUT_CONTROL         = 0x01; // Driver Output control Gate setting
       constexpr uint8_t GATE_DRIVING_VOLTAGE_CONTROL  = 0x03; // Gate Driving voltage Control
@@ -90,7 +90,7 @@ namespace DisplayCmd {
  * This class provides methods for sending a full or partial frame to an e-paper display,
  * abstracting hardware-specific implementation details.
  */
-class EPD_Driver {
+class EPD_Driver_SSD1683 {
     protected:
         EPD_HAL* hal; // Uses hardware abstraction layer
         const int width = 400;  // Display width in pixels
@@ -100,10 +100,10 @@ class EPD_Driver {
         void disable_fast_update();
         bool set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
         bool set_cursor(uint16_t x, uint16_t y);
-        void _write_framebuffer(uint8_t value, bool use_red_ram);
+        void fill_framebuffer(uint8_t value, bool use_red_ram);
         void reset();
     public:
-        EPD_Driver(EPD_HAL* hal);
+        EPD_Driver_SSD1683(EPD_HAL* hal);
         void init();
         void update(bool fast);
         void clear();
@@ -114,6 +114,6 @@ class EPD_Driver {
         void sleep();
 };
 
-#endif
+#endif // EPD_SSD1683_DRIVER_H
 
 

@@ -1,4 +1,4 @@
-#include "epd_driver.h"
+#include "epd_driver_ssd1683.h"
 
 #ifdef ESP32
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
@@ -11,9 +11,9 @@ static const char *TAG = "RDF_EPD_DRIVER";
  *
  * This constructor initializes the EPD driver with a hardware abstraction layer (HAL)
  */
-EPD_Driver::EPD_Driver(EPD_HAL *hal) : hal(hal), use_fast_update(false)
+EPD_Driver_SSD1683::EPD_Driver_SSD1683(EPD_HAL *hal) : hal(hal), use_fast_update(false)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER()");
+    ESP_LOGD(TAG, "Create EPD_Object");
     hal->init();
 }
 
@@ -24,61 +24,63 @@ EPD_Driver::EPD_Driver(EPD_HAL *hal) : hal(hal), use_fast_update(false)
  * resets the display, and configures various settings such as border waveform,
  * temperature sensor control, and data entry mode.
  */
-void EPD_Driver::init()
+void EPD_Driver_SSD1683::init()
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::init() -> START");
+    ESP_LOGD(TAG, "init EPD");
     this->reset();
     hal->wait_busy();
 
-    hal->send_command(DisplayCmd::SOFTWARE_RESET); // Software reset to default values
+    hal->send_command(SSD1683Command::SOFTWARE_RESET); // Software reset to default values
     hal->wait_busy();
 
-    hal->send_command(DisplayCmd::BORDER_WAVEFORM_CTRL);
+    // hal->send_command(SSD1683Command::DISP_UPDATE_CTRL_1);
+    // hal->send_data_byte(0x40);  // RED: Inverse RAM content
+    // hal->send_data_byte(0x00);       // BLACK: Normal
+
+    hal->send_command(SSD1683Command::BORDER_WAVEFORM_CTRL);
     hal->send_data_byte(0x05); // Default waveform setting for border LUT1
 
-    hal->send_command(DisplayCmd::TEMP_SENSOR_CONTROL);
+    hal->send_command(SSD1683Command::TEMP_SENSOR_CONTROL);
     hal->send_data_byte(0x80); // Use internal temp sensor
 
-    hal->send_command(DisplayCmd::DATA_ENTRY_MODE);
+    hal->send_command(SSD1683Command::DATA_ENTRY_MODE);
     hal->send_data_byte(0x03); // 0b0011 - x: increment (left to right), y: increment (top to bottom)  : normal mode
 
     this->set_window(0, 0, this->width, this->height);
     this->set_cursor(0, 0);
 
     hal->wait_busy();
-    ESP_LOGD(TAG, "EPD_DRIVER::init() -> END");
 }
 
 /**
  * @brief Enables fast update mode for the display.
  */
-void EPD_Driver::enable_fast_update()
+void EPD_Driver_SSD1683::enable_fast_update()
 {
     if (false == this->use_fast_update)
     {
-        ESP_LOGD(TAG, "EPD_DRIVER::en_fast() -> START");
+        ESP_LOGD(TAG, "enable fast update");
 
         // Set temp for fast update
-        hal->send_command(DisplayCmd::TEMP_REG_WRITE);
+        hal->send_command(SSD1683Command::TEMP_REG_WRITE);
         hal->send_data_byte(0x5a); // 90
 
         // Load LUT for temp value
-        hal->send_command(DisplayCmd::DISP_UPDATE_CTRL_2);
+        hal->send_command(SSD1683Command::DISP_UPDATE_CTRL_2);
         hal->send_data_byte(0x91);
-        hal->send_command(DisplayCmd::MASTER_ACTIVATION);
+        hal->send_command(SSD1683Command::MASTER_ACTIVATION);
         hal->wait_busy();
 
         this->use_fast_update = true;
-        ESP_LOGD(TAG, "EPD_DRIVER::en_fast() -> END");
     }
 }
 
 /**
  * @brief Disables fast update mode for the display.
  */
-void EPD_Driver::disable_fast_update()
+void EPD_Driver_SSD1683::disable_fast_update()
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::disable_fast()");
+    ESP_LOGD(TAG, "disable fast update");
     this->use_fast_update = false;
 }
 
@@ -106,9 +108,9 @@ void EPD_Driver::disable_fast_update()
  * set_window(0, 0, 400, 300);
  * @endcode
  */
-bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+bool EPD_Driver_SSD1683::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::set_window() -> START");
+    ESP_LOGD(TAG, "set window");
     // check if out of bound
     if ((x + w) > this->width || (y + h) > this->height)
     {
@@ -116,17 +118,16 @@ bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
         return false;
     }
 
-    hal->send_command(DisplayCmd::SET_RAM_X_ADDRESS);
+    hal->send_command(SSD1683Command::SET_RAM_X_ADDRESS);
     hal->send_data_byte((x >> 3) & 0xFF); // 1 byte are 8 pixel
     hal->send_data_byte(((x + w - 1) >> 3) & 0xFF);
 
-    hal->send_command(DisplayCmd::SET_RAM_Y_ADDRESS);
+    hal->send_command(SSD1683Command::SET_RAM_Y_ADDRESS);
     hal->send_data_byte(y & 0xFF);
     hal->send_data_byte((y >> 8) & 0xFF);
     hal->send_data_byte((y + h - 1) & 0xFF);
     hal->send_data_byte((y + h - 1) >> 8 & 0xFF);
 
-    ESP_LOGD(TAG, "EPD_DRIVER::set_window() -> END");
     return true;
 }
 
@@ -143,9 +144,9 @@ bool EPD_Driver::set_window(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
  * @return true if the cursor was successfully set, false if the specified
  *         coordinates exceed the display bounds.
  */
-bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
+bool EPD_Driver_SSD1683::set_cursor(uint16_t x, uint16_t y)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::set_cursor() -> START");
+    ESP_LOGD(TAG, "set cursor");
     // check if out of bound
     if (x > this->width || y > this->height)
     {
@@ -153,47 +154,43 @@ bool EPD_Driver::set_cursor(uint16_t x, uint16_t y)
         return false;
     }
 
-    hal->send_command(DisplayCmd::SET_RAM_X_COUNTER);
+    hal->send_command(SSD1683Command::SET_RAM_X_COUNTER);
     hal->send_data_byte((x >> 3) & 0xFF);
 
-    hal->send_command(DisplayCmd::SET_RAM_Y_COUNTER);
+    hal->send_command(SSD1683Command::SET_RAM_Y_COUNTER);
     hal->send_data_byte(y & 0xFF);
     hal->send_data_byte((y >> 8) & 0xFF);
 
-    ESP_LOGD(TAG, "EPD_DRIVER::set_cursor() -> END");
     return true;
 }
 
 /**
  * * @brief Updates the epapers screen with the current RAM content.
  */
-void EPD_Driver::update(bool fast)
+void EPD_Driver_SSD1683::update(bool fast)
 {
     if (fast)
     {
-        ESP_LOGD(TAG, "EPD_DRIVER::update() -> FAST");
+        ESP_LOGD(TAG, "FAST update");
         if (!this->use_fast_update)
         {
             this->enable_fast_update();
         }
 
-        hal->send_command(DisplayCmd::DISP_UPDATE_CTRL_2);
+        hal->send_command(SSD1683Command::DISP_UPDATE_CTRL_2);
         hal->send_data_byte(0xC7); // EN ANALOG, DISP COLOR MODE, DIS ANALOG, DIS OSC
     }
     else
     {
-        ESP_LOGD(TAG, "EPD_DRIVER::update() -> NORMAL");
+        ESP_LOGD(TAG, "NORMAL update");
         this->use_fast_update = false; // make sure that before the next fast update it gets enabled again.
 
-        hal->send_command(DisplayCmd::DISP_UPDATE_CTRL_2);
+        hal->send_command(SSD1683Command::DISP_UPDATE_CTRL_2);
         hal->send_data_byte(0xF7); // EN ANALOG, LOAD TEMP, LOAD LUT, DISP COLOR MODE, DIS ANALOG, DIS OSC
     }
 
-    ESP_LOGD(TAG, "EPD_DRIVER::update() -> ACTIVATE");
-    hal->send_command(DisplayCmd::MASTER_ACTIVATION);
-    ESP_LOGD(TAG, "EPD_DRIVER::update() -> ACTIVATE SEND");
+    hal->send_command(SSD1683Command::MASTER_ACTIVATION);
     hal->wait_busy();
-    ESP_LOGD(TAG, "EPD_DRIVER::update() -> END");
 }
 
 /**
@@ -205,17 +202,16 @@ void EPD_Driver::update(bool fast)
  * @param value The value to write to the framebuffer (0x00 for black/red, 0xFF for white).
  * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
  */
-void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
+void EPD_Driver_SSD1683::fill_framebuffer(uint8_t value, bool use_red_ram)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::_write_framebuffer() -> START");
+    ESP_LOGD(TAG, "fill framebuffer with value");
     const uint32_t buffer_size = this->height * this->width / 8;
 
     set_window(0, 0, this->width, this->height);
     set_cursor(0, 0);
 
-    hal->send_command(use_red_ram ? DisplayCmd::WRITE_RAM_RED : DisplayCmd::WRITE_RAM_BW);
+    hal->send_command(use_red_ram ? SSD1683Command::WRITE_RAM_RED : SSD1683Command::WRITE_RAM_BW);
     hal->send_data_repeat(value, buffer_size);
-    ESP_LOGD(TAG, "EPD_DRIVER::_write_framebuffer() -> END");
 }
 
 /**
@@ -224,18 +220,17 @@ void EPD_Driver::_write_framebuffer(uint8_t value, bool use_red_ram)
  * This function clears both the black/white and red RAM locations.
  * It then updates the display to reflect the cleared state.
  */
-void EPD_Driver::clear()
+void EPD_Driver_SSD1683::clear()
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::clear() -> START");
+    ESP_LOGD(TAG, "clear both framebuffers");
     // clear BW ram location
-    this->_write_framebuffer(0xFF, false);
+    this->fill_framebuffer(0xFF, false);
 
     // clear red ram location
-    this->_write_framebuffer(0x00, true);
+    this->fill_framebuffer(0x00, true);
 
     // update screen
-    this->update(false); // always make a full update on clear
-    ESP_LOGD(TAG, "EPD_DRIVER::clear() -> END");
+    this->update(false); // always make a full update on clear;
 }
 
 /**
@@ -248,19 +243,18 @@ void EPD_Driver::clear()
  *             The data should be in the format expected by the display (1 bit per pixel).
  * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
  */
-void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
+void EPD_Driver_SSD1683::write_framebuffer(const uint8_t *data, bool use_red_ram)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::write() -> START");
+    ESP_LOGD(TAG, "write framebuffer to EPD.");
     uint32_t w = (this->width % 8 == 0) ? (this->width / 8) : (this->width / 8 + 1);
     const uint32_t buffer_size = this->height * this->width / 8;
     set_window(0, 0, this->width, this->height);
     set_cursor(0, 0);
 
     // select RAM
-    hal->send_command(use_red_ram ? DisplayCmd::WRITE_RAM_RED : DisplayCmd::WRITE_RAM_BW);
+    hal->send_command(use_red_ram ? SSD1683Command::WRITE_RAM_RED : SSD1683Command::WRITE_RAM_BW);
     // Send all pixels
     hal->send_data_bulk(data, buffer_size);
-    ESP_LOGD(TAG, "EPD_DRIVER::write() -> END");
 }
 
 /**
@@ -276,18 +270,17 @@ void EPD_Driver::write_framebuffer(const uint8_t *data, bool use_red_ram)
  * @param w The width of the window (in pixels).
  * @param h The height of the window (in pixels).
  */
-void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void EPD_Driver_SSD1683::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::write_partial() -> START");
+    ESP_LOGD(TAG, "write partial framebuffer to EPD.");
     if (!set_window(x, y, w, h) || !set_cursor(x, y))
     {
         return;
     }
 
     const uint32_t buffer_size = h * w / 8;
-    hal->send_command(DisplayCmd::WRITE_RAM_BW);
+    hal->send_command(SSD1683Command::WRITE_RAM_BW);
     hal->send_data_bulk(data, buffer_size);
-    ESP_LOGD(TAG, "EPD_DRIVER::write_partial() -> END");
 }
 
 /**
@@ -301,15 +294,14 @@ void EPD_Driver::write_framebuffer_partial(const uint8_t *data, uint16_t x, uint
  * @param use_red_ram If true, writes to the red RAM; otherwise, writes to the black/white RAM.
  * @param fast If true, uses fast update mode for the display.
  */
-void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
+void EPD_Driver_SSD1683::display(const uint8_t *image, bool use_red_ram, bool fast)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::display() -> START");
+    ESP_LOGD(TAG, "display full image");
     // write image to display controller ram
     this->write_framebuffer(image, use_red_ram);
 
     // update display
     this->update(fast);
-    ESP_LOGD(TAG, "EPD_DRIVER::display() -> END");
 }
 
 /**
@@ -318,15 +310,14 @@ void EPD_Driver::display(const uint8_t *image, bool use_red_ram, bool fast)
  * This function writes a portion of the framebuffer data to the display controller's RAM
  * and then uses a fast update for updating the display.
  */
-void EPD_Driver::display_partial(const uint8_t *image, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void EPD_Driver_SSD1683::display_partial(const uint8_t *image, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::display_partial() -> START");
+    ESP_LOGD(TAG, "Display partial:");
     // write image to display controller ram
     this->write_framebuffer_partial(image, x, y, w, h);
 
     // update display
     this->update(true);
-    ESP_LOGD(TAG, "EPD_DRIVER::display_partial() -> END");
 }
 
 /**
@@ -337,12 +328,11 @@ void EPD_Driver::display_partial(const uint8_t *image, uint16_t x, uint16_t y, u
  *
  * To wake the display from deep sleep, the init() function should be called again.
  */
-void EPD_Driver::sleep()
+void EPD_Driver_SSD1683::sleep()
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::sleep() -> START");
-    hal->send_command(DisplayCmd::DEEP_SLEEP_MODE);
+    ESP_LOGD(TAG, "Send EPD to sleep");
+    hal->send_command(SSD1683Command::DEEP_SLEEP_MODE);
     hal->send_data_byte(0x01); // Deep Sleep Mode
-    ESP_LOGD(TAG, "EPD_DRIVER::sleep() -> END");
 }
 
 /**
@@ -357,14 +347,13 @@ void EPD_Driver::sleep()
  * This function performs a hardware reset of the display controller,
  * which is typically required after power-up or when waking from deep sleep.
  */
-void EPD_Driver::reset()
+void EPD_Driver_SSD1683::reset()
 {
-    ESP_LOGD(TAG, "EPD_DRIVER::reset() -> START");
+    ESP_LOGD(TAG, "Reset EPD");
     hal->set_reset_pin(HIGH);
     hal->delay_ms(200);
     hal->set_reset_pin(LOW);
     hal->delay_ms(2);
     hal->set_reset_pin(HIGH);
     hal->delay_ms(200);
-    ESP_LOGD(TAG, "EPD_DRIVER::reset() -> END");
 }

@@ -4,7 +4,7 @@
 EPaper::EPaper(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin)
 {
   this->hal = new EPD_HAL_ESP32(cs_pin, dc_pin, reset_pin, busy_pin);
-  this->driver = new EPD_Driver(hal);
+  this->driver = new EPD_Driver_SSD1683(hal);
 }
 
 void EPaper::begin()
