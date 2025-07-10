@@ -92,7 +92,7 @@ namespace SSD1683Command {
  */
 class EPD_Driver_SSD1683 {
     protected:
-        EPD_HAL* hal; // Uses hardware abstraction layer
+        EPD_HAL_INTERFACE* hal; // Uses hardware abstraction layer
         const uint16_t width;  // Display width in pixels
         const uint16_t height; // Display height in pixels
         bool use_fast_update = false;
@@ -103,7 +103,7 @@ class EPD_Driver_SSD1683 {
         void fill_framebuffer(uint8_t value, bool use_red_ram);
         void reset();
     public:
-        EPD_Driver_SSD1683(EPD_HAL* hal, const uint16_t width = 400, const uint16_t height = 300);
+        EPD_Driver_SSD1683(EPD_HAL_INTERFACE* hal, const uint16_t width = 400, const uint16_t height = 300);
         void init();
         void update(bool fast);
         void clear();

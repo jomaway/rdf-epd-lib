@@ -11,7 +11,7 @@ static const char *TAG = "RDF_EPD_DRIVER";
  *
  * This constructor initializes the EPD driver with a hardware abstraction layer (HAL)
  */
-EPD_Driver_SSD1683::EPD_Driver_SSD1683(EPD_HAL *hal, const uint16_t width, const uint16_t height) : hal(hal), width(width), height(height), use_fast_update(false)
+EPD_Driver_SSD1683::EPD_Driver_SSD1683(EPD_HAL_INTERFACE *hal, const uint16_t width, const uint16_t height) : hal(hal), width(width), height(height), use_fast_update(false)
 {
     ESP_LOGD(TAG, "Create EPD_Object");
     hal->init();

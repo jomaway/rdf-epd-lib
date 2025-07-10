@@ -1,23 +1,38 @@
 #include "ws_4in2b_V2.h"
-#include "epd_hal_esp32.h"
+#include "epd_hal.h"
 
-WS_4in2b_V2::WS_4in2b_V2(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin) : Adafruit_GFX(EPD::DisplayWidth, EPD::DisplayHeight), driver(new EPD_HAL_ESP32(cs_pin, dc_pin, reset_pin, busy_pin)), _initialized(false)
+WS_4in2b_V2::WS_4in2b_V2(int cs_pin, int dc_pin, int reset_pin, int busy_pin) : Adafruit_GFX(EPD::DisplayWidth, EPD::DisplayHeight), _initialized(false)
 {
+  auto hal = new EPD_HAL_Arduino(cs_pin, dc_pin, reset_pin, busy_pin);
+
+  #if CONFIG_IDF_TARGET_ESP32
+  SPIClass* mySPI = new SPIClass(VSPI);
+  hal->select_spi(*mySPI);
+  #elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32S3
+  SPIClass* mySPI = new SPIClass(FSPI);
+  hal->select_spi(*mySPI);
+  #endif
+  
+  driver = new EPD_Driver_SSD1683(hal);
 }
+
+
 
 void WS_4in2b_V2::begin()
 {
-  driver.init();
-  driver.clear();
+  Serial.println("BEGIN");
+  driver->init();
+  driver->clear();
   memset(framebuffer, 0xFF, EPD::BufferSize);
   _initialized = true;
+  Serial.println("END");
 }
 
 void WS_4in2b_V2::end()
 {
   _initialized = false;
   /* Deep sleep */
-  driver.sleep();
+  driver->sleep();
 }
 
 void WS_4in2b_V2::drawPixel(int16_t x, int16_t y, uint16_t color)
@@ -46,25 +61,28 @@ void WS_4in2b_V2::drawPixel(int16_t x, int16_t y, uint16_t color)
   }
 }
 
-void WS_4in2b_V2::display()
+void WS_4in2b_V2::display(bool fast)
 {
   Serial.println("display(...)");
   if (!_initialized)
   {
-    this->begin();
+    driver->init();
+    _initialized = true;
   }
 
-  driver.display(framebuffer, false, false);
+  driver->display(framebuffer, false, fast);
 }
 
 void WS_4in2b_V2::showBWImage(const uint8_t *image)
 {
+  Serial.println("show(...)");
   if (!_initialized)
   {
-    begin();
+    driver->init();
+    _initialized = true;
   }
 
-  driver.display(image,false,false);
+  driver->display(image,false,false);
 
   end();
 }

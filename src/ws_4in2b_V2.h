@@ -22,17 +22,17 @@ namespace EPD
 class WS_4in2b_V2 : public Adafruit_GFX
 {
 private:
-    EPD_Driver_SSD1683 driver;
+    EPD_Driver_SSD1683 *driver;
     uint8_t framebuffer[EPD::BufferSize];
     bool _initialized = false;
 
 public:
-    WS_4in2b_V2(unsigned int cs_pin, unsigned int dc_pin, unsigned int reset_pin, unsigned int busy_pin);
+    WS_4in2b_V2(int cs_pin, int dc_pin, int reset_pin, int busy_pin);
 
     void begin();
     void end();
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) override;
-    void display();
+    void display(bool fast = false);
     void showBWImage(const uint8_t *image);
 };
