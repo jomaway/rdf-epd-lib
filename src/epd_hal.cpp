@@ -32,7 +32,7 @@ void EPD_HAL_Arduino::send_command(const uint8_t cmd)
     digitalWrite(_dc, HIGH);
 }
 
-void EPD_HAL_Arduino::send_data_byte(const uint8_t data)
+void EPD_HAL_Arduino::send_data(const uint8_t data)
 {
     ESP_LOGD(TAG, "DATA: %02x", data);
     digitalWrite(_dc, HIGH);
@@ -41,7 +41,7 @@ void EPD_HAL_Arduino::send_data_byte(const uint8_t data)
     this->spi_end_transfer();
 }
 
-void EPD_HAL_Arduino::send_data_bulk(const uint8_t *data, uint32_t len)
+void EPD_HAL_Arduino::send_data(const uint8_t *data, uint32_t len)
 {
     digitalWrite(_dc, HIGH);
     this->spi_start_transfer();
@@ -104,6 +104,7 @@ inline void EPD_HAL_Arduino::spi_end_transfer()
     digitalWrite(_cs, HIGH);
     _spi->endTransaction();
 }
+
 
 void EPD_HAL_Arduino::select_spi(SPIClass &spi)
 {

@@ -13,7 +13,7 @@ WS_4in2b_V2::WS_4in2b_V2(int cs_pin, int dc_pin, int reset_pin, int busy_pin) : 
   hal->select_spi(*mySPI);
   #endif
   
-  driver = new EPD_Driver_SSD1683(hal);
+  driver = new SSD1683(hal);
 }
 
 
@@ -61,7 +61,7 @@ void WS_4in2b_V2::drawPixel(int16_t x, int16_t y, uint16_t color)
   }
 }
 
-void WS_4in2b_V2::display(bool fast)
+void WS_4in2b_V2::display(UpdateMode mode)
 {
   Serial.println("display(...)");
   if (!_initialized)
@@ -70,7 +70,7 @@ void WS_4in2b_V2::display(bool fast)
     _initialized = true;
   }
 
-  driver->display(framebuffer, false, fast);
+  driver->display(framebuffer, RAM::BW, mode);
 }
 
 void WS_4in2b_V2::showBWImage(const uint8_t *image)
@@ -82,7 +82,7 @@ void WS_4in2b_V2::showBWImage(const uint8_t *image)
     _initialized = true;
   }
 
-  driver->display(image,false,false);
+  driver->display(image);
 
   end();
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "epd_driver_ssd1683.h"
+#include "ssd1683.h"
 #include <Adafruit_GFX.h>
-#include <stdint.h>
+#include <inttypes.h>
 
 // Display resolution
 namespace EPD
@@ -22,7 +22,7 @@ namespace EPD
 class WS_4in2b_V2 : public Adafruit_GFX
 {
 private:
-    EPD_Driver_SSD1683 *driver;
+    SSD1683 *driver;
     uint8_t framebuffer[EPD::BufferSize];
     bool _initialized = false;
 
@@ -33,6 +33,6 @@ public:
     void end();
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) override;
-    void display(bool fast = false);
+    void display(UpdateMode mode = UpdateMode::Normal);
     void showBWImage(const uint8_t *image);
 };
